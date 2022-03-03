@@ -8,7 +8,7 @@ import {
   SpeechTranslationConfig,
   TranslationRecognizer,
 } from 'microsoft-cognitiveservices-speech-sdk';
-import { useEffect, useRef, useState, VFC } from 'react';
+import { useEffect, useState, VFC } from 'react';
 
 type SpeechToken = { token: string; region: string };
 
@@ -91,7 +91,7 @@ export const SpeechToTextPage: VFC = () => {
               event.result.text
             }\n----------------------------------------------------------------------------------------\n${
               event.result.translations.get(targetLang)
-            }`.replaceAll('. ', '. \n').replaceAll("。", "。\n");
+            }`.replaceAll('. ', '. \n').replaceAll('。', '。\n');
             return [...newTexts, text, ''];
           });
         }
