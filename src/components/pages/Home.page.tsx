@@ -1,7 +1,7 @@
 import { Box, Button, Typography } from '@mui/material';
 import axios from 'axios';
 import { AudioConfig, ResultReason, SpeechConfig, SpeechRecognizer } from 'microsoft-cognitiveservices-speech-sdk';
-import { useEffect, useState, VFC } from 'react';
+import { useEffect, useRef, useState, VFC } from 'react';
 
 type SpeechToken = { token: string; region: string };
 
@@ -10,6 +10,8 @@ export const HomePage: VFC = () => {
   const [recognizer, setRecognizer] = useState<SpeechRecognizer | null>(null);
 
   const [texts, setTexts] = useState<string[]>([]);
+
+  const listRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     axios.get<{ token: string; region: string }>('/api/get-speech-token').then((res) => {
@@ -31,7 +33,7 @@ export const HomePage: VFC = () => {
       setTexts((prevState) => {
         const newTexts = [...prevState];
         newTexts.pop();
-        return [...newTexts, event.result.text];
+        return [...newTexts, event.result.text.replaceAll('。', '。\n')];
       });
     };
     recognizer.recognized = (sender, event) => {
@@ -39,12 +41,18 @@ export const HomePage: VFC = () => {
         setTexts((prevState) => {
           const newTexts = [...prevState];
           newTexts.pop();
-          return [...newTexts, event.result.text, ''];
+          return [...newTexts, event.result.text.replaceAll('。', '。\n'), ''];
         });
       }
     };
     setRecognizer(recognizer);
   }, [speechToken]);
+
+  useEffect(() => {
+    if (window) {
+      window.scrollTo({ top: window.innerHeight });
+    }
+  }, [texts]);
 
   const startFromMic = async () => {
     if (!recognizer) {
@@ -78,15 +86,19 @@ export const HomePage: VFC = () => {
         <Button variant={'contained'} onClick={() => stopFromMic()}>
           止める
         </Button>
-        <Button variant={'contained'} onClick={() => setTexts([])}>
+        <Button variant={'contained'} onClick={() => setTexts([''])}>
           クリアする
         </Button>
       </Box>
 
       <Box sx={{ marginTop: 3, display: 'flex', flexDirection: 'column', gap: 2 }}>
-        {texts.map((text, i) => (
-          <Typography key={i}>{text}</Typography>
-        ))}
+        {texts
+          .filter((e) => e)
+          .map((text, i) => (
+            <Box key={i} sx={{ padding: 2, border: 'solid 1px', borderColor: 'grey.300', whiteSpace: 'pre-wrap' }}>
+              <Typography>{text}</Typography>
+            </Box>
+          ))}
       </Box>
     </>
   );
