@@ -56,10 +56,20 @@ export const SpeechToTextPage: VFC = () => {
       setRecognizer(recognizer);
       return;
     }
-    if (mode === '2') {
+    if (mode === '2' || mode === '3') {
+      let speechLang = '';
+      let targetLang = '';
+      if (mode === '2') {
+        speechLang = 'en-US';
+        targetLang = 'ja';
+      }
+      if (mode === '3') {
+        speechLang = 'ja-JP';
+        targetLang = 'en';
+      }
       const speechConfig = SpeechTranslationConfig.fromAuthorizationToken(speechToken.token, speechToken.region);
-      speechConfig.speechRecognitionLanguage = 'en-US';
-      speechConfig.addTargetLanguage('ja');
+      speechConfig.speechRecognitionLanguage = speechLang;
+      speechConfig.addTargetLanguage(targetLang);
 
       const audioConfig = AudioConfig.fromDefaultMicrophoneInput();
       const recognizer = new TranslationRecognizer(speechConfig, audioConfig);
@@ -67,12 +77,12 @@ export const SpeechToTextPage: VFC = () => {
         setTexts((prevState) => {
           const newTexts = [...prevState];
           newTexts.pop();
-          return [...newTexts, event.result.text.replaceAll('. ', '. \n')];
+          return [...newTexts, event.result.text];
         });
       };
       recognizer.recognized = (sender, event) => {
         console.log(event.result);
-        if (event.result.reason === ResultReason.TranslatedSpeech && event.result.translations.get('ja')) {
+        if (event.result.reason === ResultReason.TranslatedSpeech && event.result.translations.get(targetLang)) {
           setTexts((prevState) => {
             const newTexts = [...prevState];
             newTexts.pop();
@@ -80,8 +90,8 @@ export const SpeechToTextPage: VFC = () => {
             const text = `${
               event.result.text
             }\n----------------------------------------------------------------------------------------\n${
-              event.result.translations.get('ja')
-            }`.replaceAll('s', '');
+              event.result.translations.get(targetLang)
+            }`.replaceAll('. ', '. \n').replaceAll("。", "。\n");
             return [...newTexts, text, ''];
           });
         }
@@ -134,6 +144,7 @@ export const SpeechToTextPage: VFC = () => {
         <Select value={mode} onChange={(e) => onChangeMode(e.target.value)}>
           <MenuItem value={'1'}>音声文字起こしモード</MenuItem>
           <MenuItem value={'2'}>英語から日本語に翻訳モード</MenuItem>
+          <MenuItem value={'3'}>日本語から英語に翻訳モード</MenuItem>
         </Select>
       </Box>
 
