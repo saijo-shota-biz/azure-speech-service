@@ -1331,6 +1331,11 @@ has@^1.0.3:
   dependencies:
     function-bind "^1.1.1"
 
+hasky@^3.0.2:
+  version "3.0.2"
+  resolved "https://registry.yarnpkg.com/hasky/-/hasky-3.0.2.tgz#16f2807bc87969a6c6c3ef7922e9fe2c13a869eb"
+  integrity sha512-p+Bsfws1CkjtZHA8tSx/uFJyFm78AH//bIuxLu4TstbUa6PO2ufJAhiok7JTIB9z29K/vn0VC6qI8M1MjRunJA==
+
 heimdalljs@^0.2.3:
   version "0.2.6"
   resolved "https://registry.yarnpkg.com/heimdalljs/-/heimdalljs-0.2.6.tgz#b0eebabc412813aeb9542f9cc622cb58dbdcd9fe"
