@@ -1,10 +1,12 @@
 import type { NextPage } from 'next';
 
-import { HomePage } from '../components/pages/Home.page';
+import { SpeechToTextPage } from '../components/pages/SpeechToText.page';
 
 const Home: NextPage = () => {
   return (
-    <><HomePage /></>
+    <>
+      <SpeechToTextPage />
+    </>
   );
 };
 
