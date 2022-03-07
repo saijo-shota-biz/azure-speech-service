@@ -8,23 +8,50 @@ import {
   SpeechTranslationConfig,
   TranslationRecognizer,
 } from 'microsoft-cognitiveservices-speech-sdk';
+import Link from 'next/link';
 import { useEffect, useState, VFC } from 'react';
 
 type SpeechToken = { token: string; region: string };
 
-export const SpeechToTextPage: VFC = () => {
+const SpeechToTextPage: VFC = () => {
   const [speechToken, setSpeechToken] = useState<SpeechToken | null>(null);
   const [recognizer, setRecognizer] = useState<SpeechRecognizer | TranslationRecognizer | null>(null);
 
   const [texts, setTexts] = useState<string[]>([]);
 
   const [mode, setMode] = useState<string>('1');
+  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>();
+  const [chunks, setChunks] = useState<Blob[]>([]);
+  const [audioDataUrl, setAudioDataUrl] = useState<string>();
 
   useEffect(() => {
     axios.get<{ token: string; region: string }>('/api/get-speech-token').then((res) => {
       setSpeechToken(res.data);
     });
+    init();
   }, []);
+
+  const init = () => {
+    const constraints = { audio: true };
+    navigator.mediaDevices.getUserMedia(constraints).then(
+      (stream) => {
+        const mediaRecorder = new MediaRecorder(stream);
+        mediaRecorder.ondataavailable = function (e) {
+          chunks.push(e.data);
+        };
+        mediaRecorder.onstop = (ev) => {
+          const blob = new Blob(chunks, { type: 'audio/wav' });
+          setChunks([]);
+          const audioURL = window.URL.createObjectURL(blob);
+          setAudioDataUrl(audioURL);
+        };
+        setMediaRecorder(mediaRecorder);
+      },
+      (err) => {
+        console.log('The following error occured: ' + err);
+      }
+    );
+  };
 
   useEffect(() => {
     if (!speechToken) {
@@ -119,8 +146,11 @@ export const SpeechToTextPage: VFC = () => {
     if (!recognizer) {
       return;
     }
+
     recognizer.startContinuousRecognitionAsync(() => {
-      console.log('recognition start');
+      if (mediaRecorder) {
+        mediaRecorder.start();
+      }
       setTexts(['']);
     });
   };
@@ -130,8 +160,23 @@ export const SpeechToTextPage: VFC = () => {
       return;
     }
     recognizer.stopContinuousRecognitionAsync(() => {
+      if (mediaRecorder) {
+        mediaRecorder.stop();
+      }
       console.log('recognition stop');
     });
+  };
+
+  const download = () => {
+    if (audioDataUrl) {
+      let link = document.createElement('a');
+      const fileName = window.prompt('ダウンロードするファイル名を入力してください。', 'sample');
+      link.download = `${fileName}.wav`;
+      link.href = audioDataUrl;
+      link.click();
+      URL.revokeObjectURL(link.href);
+      setAudioDataUrl('');
+    }
   };
 
   if (!speechToken) {
@@ -140,6 +185,7 @@ export const SpeechToTextPage: VFC = () => {
 
   return (
     <>
+      <Link href={'/player'}>音声ファイルを再生する</Link>
       <Box sx={{ marginTop: 3 }}>
         <Select value={mode} onChange={(e) => onChangeMode(e.target.value)}>
           <MenuItem value={'1'}>音声文字起こしモード</MenuItem>
@@ -158,6 +204,12 @@ export const SpeechToTextPage: VFC = () => {
         <Button variant={'contained'} onClick={() => setTexts([''])}>
           クリアする
         </Button>
+        {audioDataUrl && <audio src={audioDataUrl} controls={true} />}
+        {audioDataUrl && (
+          <Button variant={'contained'} onClick={() => download()}>
+            ダウンロード
+          </Button>
+        )}
       </Box>
 
       <Box sx={{ marginTop: 3, display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -172,3 +224,5 @@ export const SpeechToTextPage: VFC = () => {
     </>
   );
 };
+
+export default SpeechToTextPage;
