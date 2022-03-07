@@ -1,4 +1,4 @@
-import { Box, Button, MenuItem, Select, Typography } from '@mui/material';
+import { Box, Button, Checkbox, FormControlLabel, MenuItem, Select, Typography } from '@mui/material';
 import axios from 'axios';
 import {
   AudioConfig,
@@ -20,7 +20,10 @@ const SpeechToTextPage: VFC = () => {
   const [texts, setTexts] = useState<string[]>([]);
 
   const [mode, setMode] = useState<string>('1');
+
+  const [doRecoding, setDoRecording] = useState(false);
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>();
+  const [stream, setStream] = useState<MediaStream>();
   const [chunks, setChunks] = useState<Blob[]>([]);
   const [audioDataUrl, setAudioDataUrl] = useState<string>();
 
@@ -28,10 +31,17 @@ const SpeechToTextPage: VFC = () => {
     axios.get<{ token: string; region: string }>('/api/get-speech-token').then((res) => {
       setSpeechToken(res.data);
     });
-    init();
   }, []);
 
-  const init = () => {
+  useEffect(() => {
+    if (doRecoding) {
+      initializeRecoding();
+    } else {
+      finalizeRecording();
+    }
+  }, [doRecoding]);
+
+  const initializeRecoding = () => {
     const constraints = { audio: true };
     navigator.mediaDevices.getUserMedia(constraints).then(
       (stream) => {
@@ -45,12 +55,22 @@ const SpeechToTextPage: VFC = () => {
           const audioURL = window.URL.createObjectURL(blob);
           setAudioDataUrl(audioURL);
         };
+        setStream(stream);
         setMediaRecorder(mediaRecorder);
       },
       (err) => {
         console.log('The following error occured: ' + err);
       }
     );
+  };
+
+  const finalizeRecording = () => {
+    if (stream) {
+      stream.getTracks().forEach((e) => e.stop());
+    }
+    setMediaRecorder(null);
+    setAudioDataUrl('');
+    setChunks([]);
   };
 
   useEffect(() => {
@@ -186,12 +206,16 @@ const SpeechToTextPage: VFC = () => {
   return (
     <>
       <Link href={'/player'}>音声ファイルを再生する</Link>
-      <Box sx={{ marginTop: 3 }}>
+      <Box sx={{ marginTop: 3, display: 'flex', gap: 3 }}>
         <Select value={mode} onChange={(e) => onChangeMode(e.target.value)}>
           <MenuItem value={'1'}>音声文字起こしモード</MenuItem>
           <MenuItem value={'2'}>英語から日本語に翻訳モード</MenuItem>
           <MenuItem value={'3'}>日本語から英語に翻訳モード</MenuItem>
         </Select>
+        <FormControlLabel
+          label="録音する"
+          control={<Checkbox checked={doRecoding} onChange={(event) => setDoRecording(event.target.checked)} />}
+        />
       </Box>
 
       <Box sx={{ display: 'flex', gap: 2, marginTop: 3 }}>
@@ -201,7 +225,13 @@ const SpeechToTextPage: VFC = () => {
         <Button variant={'contained'} onClick={() => stopFromMic()}>
           止める
         </Button>
-        <Button variant={'contained'} onClick={() => setTexts([''])}>
+        <Button
+          variant={'contained'}
+          onClick={() => {
+            setTexts(['']);
+            finalizeRecording();
+          }}
+        >
           クリアする
         </Button>
         {audioDataUrl && <audio src={audioDataUrl} controls={true} />}
