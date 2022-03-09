@@ -1,6 +1,7 @@
 import type { NextPage } from 'next';
+import dynamic from 'next/dynamic';
 
-import SpeechToTextPage from '../components/pages/SpeechToText.page';
+const SpeechToTextPage = dynamic(() => import('../components/pages/SpeechToText.page'), { ssr: false });
 
 const Home: NextPage = () => {
   return (
