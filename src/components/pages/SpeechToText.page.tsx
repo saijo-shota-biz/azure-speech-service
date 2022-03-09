@@ -175,37 +175,39 @@ const SpeechToTextPage: VFC = () => {
 
     transcriber.joinConversationAsync(conversation, () => {
       console.log('transcriber.joinConversationAsync start');
-      const user1 = Participant.From('user1@example.com', 'ja-JP', '');
-      const user2 = Participant.From('user2@example.com', 'ja-JP', '');
-      conversation.addParticipantAsync(user1);
-      conversation.addParticipantAsync(user2);
+      // const user1 = Participant.From('user1@example.com', 'ja-JP', '');
+      // const user2 = Participant.From('user2@example.com', 'ja-JP', '');
+      // conversation.addParticipantAsync(user1);
+      // conversation.addParticipantAsync(user2);
       transcriber.sessionStarted = (sender, event) => {
         console.log(`sessionStarted`);
-        console.log({ sender, event });
       };
       transcriber.sessionStopped = (sender, event) => {
         console.log(`sessionStopped`);
-        console.log({ sender, event });
       };
-      transcriber.canceled = (sender, event) => {
-        console.log(`canceled`);
-        console.log({ sender, event });
-      };
-      transcriber.conversationStarted = (sender, event) => {
-        console.log(`conversationStarted`);
-        console.log({ sender, event });
-      };
-      transcriber.conversationStopped = (sender, event) => {
-        console.log(`conversationStopped`);
-        console.log({ sender, event });
-      };
+      // transcriber.canceled = (sender, event) => {
+      //   console.log(`canceled`);
+      //   console.log({ sender, event });
+      // };
+      // transcriber.conversationStarted = (sender, event) => {
+      //   console.log(`conversationStarted`);
+      //   console.log({ sender, event });
+      // };
+      // transcriber.conversationStopped = (sender, event) => {
+      //   console.log(`conversationStopped`);
+      //   console.log({ sender, event });
+      // };
       transcriber.transcribing = (sender, event) => {
-        console.log(`transcribing`);
-        console.log({ sender, event });
+        // console.log(`transcribing`);
+        // console.log({ sender, event });
       };
       transcriber.transcribed = (sender, event) => {
-        console.log(`transcribed`);
-        console.log({ sender, event });
+        if (!event.result.text) {
+          return;
+        }
+        // console.log(`transcribed`);
+        console.log(`${event.result.speakerId}: 「${event.result.text}」`);
+        setTexts((prev) => [...prev, `${event.result.speakerId}: 「${event.result.text}」`]);
       };
       transcriber.startTranscribingAsync(() => {
         console.log(`mode=${mode}: started`);
@@ -259,7 +261,7 @@ const SpeechToTextPage: VFC = () => {
   const download = () => {
     if (audioDataUrl) {
       let link = document.createElement('a');
-      const fileName = window.prompt('ダウンロードするファイル名を入力してください。', 'sample');
+      const fileName = window.prompt('ダウンロードするファイル名を入力してください。', 'transcribe_sample');
       link.download = `${fileName}.wav`;
       link.href = audioDataUrl;
       link.click();
