@@ -51,10 +51,5 @@ export let exportWAV = function (audioData: string | any[], sampleRate: number) 
   };
 
   let dataview = encodeWAV(mergeBuffers(audioData), sampleRate);
-  let audioBlob = new Blob([dataview], { type: 'audio/wav' });
-  console.log(dataview);
-
-  let myURL = window.URL || window.webkitURL;
-  let url = myURL.createObjectURL(audioBlob);
-  return url;
+  return new Blob([dataview], { type: 'audio/wav' });
 };

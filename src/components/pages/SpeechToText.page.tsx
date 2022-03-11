@@ -15,6 +15,7 @@ import Link from 'next/link';
 import { ChangeEvent, useEffect, useState, VFC } from 'react';
 
 import { exportWAV } from '../../utils/exportWav';
+import * as Url from 'url';
 
 type SpeechToken = { token: string; region: string };
 
@@ -31,7 +32,7 @@ const SpeechToTextPage: VFC = () => {
   const [doRecoding, setDoRecording] = useState(false);
   const [audioContext, setAudioContext] = useState<AudioContext>();
   const [sampleRate, setSampleRate] = useState<number>(16000);
-  const [audioData, setAudioData] = useState<any[]>([]);
+  const [audioData, setAudioData] = useState<Float32Array[]>([]);
   const [audioDataUrl, setAudioDataUrl] = useState<string>();
 
   useEffect(() => {
@@ -39,14 +40,6 @@ const SpeechToTextPage: VFC = () => {
       setSpeechToken(res.data);
     });
   }, []);
-
-  useEffect(() => {
-    if (doRecoding) {
-      initializeRecoding();
-    } else {
-      finalizeRecording();
-    }
-  }, [doRecoding]);
 
   const initializeRecoding = async () => {
     const onAudioProcess = function (e: AudioProcessingEvent) {
@@ -69,7 +62,10 @@ const SpeechToTextPage: VFC = () => {
   };
 
   const finalizeRecording = () => {
-    audioContext?.close();
+    if (audioContext) {
+      audioContext?.close();
+    }
+    setAudioContext(undefined);
     setAudioDataUrl('');
     setAudioData([]);
   };
@@ -175,37 +171,23 @@ const SpeechToTextPage: VFC = () => {
 
     transcriber.joinConversationAsync(conversation, () => {
       console.log('transcriber.joinConversationAsync start');
-      // const user1 = Participant.From('user1@example.com', 'ja-JP', '');
-      // const user2 = Participant.From('user2@example.com', 'ja-JP', '');
-      // conversation.addParticipantAsync(user1);
-      // conversation.addParticipantAsync(user2);
+      const user1 = Participant.From('user1@example.com', 'ja-JP', '');
+      const user2 = Participant.From('user2@example.com', 'ja-JP', '');
+      conversation.addParticipantAsync(user1);
+      conversation.addParticipantAsync(user2);
       transcriber.sessionStarted = (sender, event) => {
         console.log(`sessionStarted`);
       };
       transcriber.sessionStopped = (sender, event) => {
         console.log(`sessionStopped`);
       };
-      // transcriber.canceled = (sender, event) => {
-      //   console.log(`canceled`);
-      //   console.log({ sender, event });
-      // };
-      // transcriber.conversationStarted = (sender, event) => {
-      //   console.log(`conversationStarted`);
-      //   console.log({ sender, event });
-      // };
-      // transcriber.conversationStopped = (sender, event) => {
-      //   console.log(`conversationStopped`);
-      //   console.log({ sender, event });
-      // };
       transcriber.transcribing = (sender, event) => {
-        // console.log(`transcribing`);
-        // console.log({ sender, event });
+        console.log(`${event.result.speakerId}: 「${event.result.text}」`);
       };
       transcriber.transcribed = (sender, event) => {
         if (!event.result.text) {
           return;
         }
-        // console.log(`transcribed`);
         console.log(`${event.result.speakerId}: 「${event.result.text}」`);
         setTexts((prev) => [...prev, `${event.result.speakerId}: 「${event.result.text}」`]);
       };
@@ -235,6 +217,9 @@ const SpeechToTextPage: VFC = () => {
       recognizer.startContinuousRecognitionAsync(() => {
         console.log(`mode=${mode}: started`);
         setTexts(['']);
+        if (doRecoding) {
+          initializeRecoding();
+        }
       });
     }
   };
@@ -242,11 +227,22 @@ const SpeechToTextPage: VFC = () => {
   const stopFromMic = async () => {
     if (['1', '2', '3'].includes(mode) && recognizer) {
       recognizer.stopContinuousRecognitionAsync(() => {
-        if (audioData.length > 0) {
-          setAudioDataUrl(exportWAV(audioData, sampleRate));
-        }
         console.log(`mode=${mode}: stopped`);
       });
+      finalizeRecording();
+      if (audioData.length > 0) {
+        console.log('waveFile create start');
+
+        const audioDataBlob = exportWAV(audioData, sampleRate);
+        // const file = new File([audioDataBlob], 'test.wav');
+        // const data = new FormData();
+        // data.append('file', file);
+        // const headers = { 'content-type': 'multipart/form-data' };
+        // axios.post('/api/get-8ch-audio-file', data, { headers }).then((res) => {
+        //   setAudioDataUrl(res.data.url);
+        // });
+        setAudioDataUrl(URL.createObjectURL(audioDataBlob));
+      }
     }
   };
 
