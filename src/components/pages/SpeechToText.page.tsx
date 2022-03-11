@@ -4,7 +4,6 @@ import {
   AudioConfig,
   Conversation,
   ConversationTranscriber,
-  Participant,
   ResultReason,
   SpeechConfig,
   SpeechRecognizer,
@@ -15,11 +14,11 @@ import Link from 'next/link';
 import { ChangeEvent, useEffect, useState, VFC } from 'react';
 
 import { exportWAV } from '../../utils/exportWav';
-import * as Url from 'url';
 
 type SpeechToken = { token: string; region: string };
 
 const bufferSize = 1024;
+const Language = 'ja-JP';
 
 const SpeechToTextPage: VFC = () => {
   const [speechToken, setSpeechToken] = useState<SpeechToken | null>(null);
@@ -92,7 +91,7 @@ const SpeechToTextPage: VFC = () => {
       return;
     }
     const speechConfig = SpeechConfig.fromAuthorizationToken(speechToken.token, speechToken.region);
-    speechConfig.speechRecognitionLanguage = 'ja-JP';
+    speechConfig.speechRecognitionLanguage = Language;
 
     const audioConfig = AudioConfig.fromDefaultMicrophoneInput();
     const recognizer = new SpeechRecognizer(speechConfig, audioConfig);
@@ -160,7 +159,7 @@ const SpeechToTextPage: VFC = () => {
     const audioConfig = AudioConfig.fromWavFileInput(audioFile);
     speechTranslationConfig.setProperty('ConversationTranscriptionInRoomAndOnline', 'true');
     speechTranslationConfig.setProperty('DifferentiateGuestSpeakers', 'true');
-    speechTranslationConfig.speechRecognitionLanguage = 'ja-JP';
+    speechTranslationConfig.speechRecognitionLanguage = Language;
 
     const randomId = Math.floor((1 + Math.random()) * 0x10000)
       .toString(16)
@@ -171,10 +170,10 @@ const SpeechToTextPage: VFC = () => {
 
     transcriber.joinConversationAsync(conversation, () => {
       console.log('transcriber.joinConversationAsync start');
-      const user1 = Participant.From('user1@example.com', 'ja-JP', '');
-      const user2 = Participant.From('user2@example.com', 'ja-JP', '');
-      conversation.addParticipantAsync(user1);
-      conversation.addParticipantAsync(user2);
+      // const user1 = Participant.From('user1@example.com', 'ja-JP', '');
+      // const user2 = Participant.From('user2@example.com', 'ja-JP', '');
+      // conversation.addParticipantAsync(user1);
+      // conversation.addParticipantAsync(user2);
       transcriber.sessionStarted = (sender, event) => {
         console.log(`sessionStarted`);
       };
