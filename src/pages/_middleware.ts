@@ -7,7 +7,7 @@ export function middleware(req: NextRequest) {
     const auth = basicAuth.split(' ')[1];
     const [user, pwd] = Buffer.from(auth, 'base64').toString().split(':');
 
-    if (user === 'azure-speech-service' && pwd === '8der272gt_3XJzTBic4aV4Y9EsZNVDwzZmyKp8M79hYMLQgfxg9NVT8fB5GaKU6H') {
+    if (user === process.env.BASIC_AUTH_USER && pwd === process.env.BASIC_AUTH_PASS) {
       return NextResponse.next();
     }
   }
