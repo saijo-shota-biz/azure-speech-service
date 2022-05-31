@@ -1,4 +1,16 @@
-import { Box, Button, Checkbox, FormControlLabel, MenuItem, Select, Typography } from '@mui/material';
+import {
+  Accordion,
+  AccordionDetails,
+  AccordionSummary,
+  Box,
+  Button,
+  Checkbox,
+  FormControlLabel,
+  MenuItem,
+  Select,
+  Stack,
+  Typography,
+} from '@mui/material';
 import axios from 'axios';
 import {
   AudioConfig,
@@ -15,18 +27,29 @@ import { ChangeEvent, useEffect, useState, VFC } from 'react';
 
 import { exportWAV } from '../../utils/exportWav';
 
+import { Lang, pattern } from './TranslationPattern';
+import { ExpandMore } from '@mui/icons-material';
+
 type SpeechToken = { token: string; region: string };
 
 const bufferSize = 1024;
 const Language = 'ja-JP';
 
+type Result = {
+  text: string;
+  translations?: {
+    lang: string;
+    text: string;
+  }[];
+};
+
 const SpeechToTextPage: VFC = () => {
   const [speechToken, setSpeechToken] = useState<SpeechToken | null>(null);
   const [recognizer, setRecognizer] = useState<SpeechRecognizer | TranslationRecognizer | null>(null);
 
-  const [texts, setTexts] = useState<string[]>([]);
+  const [texts, setTexts] = useState<Result[]>([]);
 
-  const [mode, setMode] = useState<string>('1');
+  const [mode, setMode] = useState<string>('0');
 
   const [doRecoding, setDoRecording] = useState(false);
   const [audioContext, setAudioContext] = useState<AudioContext>();
@@ -70,19 +93,13 @@ const SpeechToTextPage: VFC = () => {
   };
 
   useEffect(() => {
-    if (mode === '1') {
+    if (mode === '0') {
       speechToText();
       return;
     }
-    if (mode === '2' || mode === '3') {
-      if (mode === '2') {
-        speechToTextWithTranslate('en-US', 'ja');
-        return;
-      }
-      if (mode === '3') {
-        speechToTextWithTranslate('ja-JP', 'en');
-        return;
-      }
+    const translation = pattern.find((e) => e.id === mode);
+    if (translation) {
+      speechToTextWithTranslate(translation.from, translation.to);
     }
   }, [speechToken, mode]);
 
@@ -99,7 +116,7 @@ const SpeechToTextPage: VFC = () => {
       setTexts((prevState) => {
         const newTexts = [...prevState];
         newTexts.pop();
-        return [...newTexts, event.result.text.replaceAll('。', '。\n')];
+        return [...newTexts, { text: event.result.text }];
       });
     };
     recognizer.recognized = (sender, event) => {
@@ -107,19 +124,20 @@ const SpeechToTextPage: VFC = () => {
         setTexts((prevState) => {
           const newTexts = [...prevState];
           newTexts.pop();
-          return [...newTexts, event.result.text.replaceAll('。', '。\n'), ''];
+          return [...newTexts, { text: event.result.text }, { text: '' }];
         });
       }
     };
     setRecognizer(recognizer);
   };
-  const speechToTextWithTranslate = (fromLang: string, toLang: string) => {
+
+  const speechToTextWithTranslate = (fromLang: string, toLang: Lang[]) => {
     if (!speechToken) {
       return;
     }
     const speechConfig = SpeechTranslationConfig.fromAuthorizationToken(speechToken.token, speechToken.region);
     speechConfig.speechRecognitionLanguage = fromLang;
-    speechConfig.addTargetLanguage(toLang);
+    toLang.forEach((l) => speechConfig.addTargetLanguage(l.code));
 
     const audioConfig = AudioConfig.fromDefaultMicrophoneInput();
     const recognizer = new TranslationRecognizer(speechConfig, audioConfig);
@@ -127,24 +145,26 @@ const SpeechToTextPage: VFC = () => {
       setTexts((prevState) => {
         const newTexts = [...prevState];
         newTexts.pop();
-        return [...newTexts, event.result.text];
+        return [...newTexts, { text: event.result.text }];
       });
     };
     recognizer.recognized = (sender, event) => {
-      if (event.result.reason === ResultReason.TranslatedSpeech && event.result.translations.get(toLang)) {
+      if (event.result.reason === ResultReason.TranslatedSpeech && event.result.text) {
         setTexts((prevState) => {
           const newTexts = [...prevState];
           newTexts.pop();
-          // prettier-ignore
-          const text = `${
-            event.result.text
-          }\n----------------------------------------------------------------------------------------\n${
-            event.result.translations.get(toLang)
-          }`.replaceAll('. ', '. \n').replaceAll('。', '。\n');
-          return [...newTexts, text, ''];
+          return [
+            ...newTexts,
+            {
+              text: event.result.text,
+              translations: toLang.map((l) => ({ lang: l.label, text: event.result.translations.get(l.code) })),
+            },
+            { text: '' },
+          ];
         });
       }
     };
+    console.log('speechToTextWithTranslate', fromLang, toLang);
     setRecognizer(recognizer);
   };
   const transcribeConversation = (audioFile: File) => {
@@ -188,11 +208,11 @@ const SpeechToTextPage: VFC = () => {
           return;
         }
         console.log(`${event.result.speakerId}: 「${event.result.text}」`);
-        setTexts((prev) => [...prev, `${event.result.speakerId}: 「${event.result.text}」`]);
+        setTexts((prev) => [...prev, { text: `${event.result.speakerId}: 「${event.result.text}」` }]);
       };
       transcriber.startTranscribingAsync(() => {
         console.log(`mode=${mode}: started`);
-        setTexts(['']);
+        setTexts([{ text: '' }]);
       });
     });
   };
@@ -207,15 +227,15 @@ const SpeechToTextPage: VFC = () => {
     if (recognizer) {
       await stopFromMic();
     }
-    setTexts(['']);
+    setTexts([{ text: '' }]);
     setMode(value);
   };
 
   const startFromMic = async () => {
-    if (['1', '2', '3'].includes(mode) && recognizer) {
+    if (recognizer) {
       recognizer.startContinuousRecognitionAsync(() => {
         console.log(`mode=${mode}: started`);
-        setTexts(['']);
+        setTexts([{ text: '' }]);
         if (doRecoding) {
           initializeRecoding();
         }
@@ -224,7 +244,7 @@ const SpeechToTextPage: VFC = () => {
   };
 
   const stopFromMic = async () => {
-    if (['1', '2', '3'].includes(mode) && recognizer) {
+    if (recognizer) {
       recognizer.stopContinuousRecognitionAsync(() => {
         console.log(`mode=${mode}: stopped`);
       });
@@ -274,10 +294,12 @@ const SpeechToTextPage: VFC = () => {
       <Link href={'/player'}>音声ファイルを再生する</Link>
       <Box sx={{ marginTop: 3, display: 'flex', gap: 3 }}>
         <Select value={mode} onChange={(e) => onChangeMode(e.target.value)}>
-          <MenuItem value={'1'}>音声文字起こしモード</MenuItem>
-          <MenuItem value={'2'}>英語から日本語に翻訳モード</MenuItem>
-          <MenuItem value={'3'}>日本語から英語に翻訳モード</MenuItem>
-          <MenuItem value={'4'}>会話文字起こしモード</MenuItem>
+          <MenuItem value={'0'}>音声文字起こしモード</MenuItem>
+          {pattern.map((e) => (
+            <MenuItem key={e.id} value={e.id}>
+              {e.fromLabel}から翻訳
+            </MenuItem>
+          ))}
         </Select>
         <FormControlLabel
           label="録音する"
@@ -286,42 +308,48 @@ const SpeechToTextPage: VFC = () => {
       </Box>
 
       <Box sx={{ display: 'flex', gap: 2, marginTop: 3 }}>
-        {mode === '4' ? (
-          <input type={'file'} onChange={onChange} />
-        ) : (
-          <>
-            <Button variant={'contained'} onClick={() => startFromMic()}>
-              話す
-            </Button>
-            <Button variant={'contained'} onClick={() => stopFromMic()}>
-              止める
-            </Button>
-            <Button
-              variant={'contained'}
-              onClick={() => {
-                setTexts(['']);
-                finalizeRecording();
-              }}
-            >
-              クリアする
-            </Button>
-            {audioDataUrl && <audio src={audioDataUrl} controls={true} />}
-            {audioDataUrl && (
-              <Button variant={'contained'} onClick={() => download()}>
-                ダウンロード
-              </Button>
-            )}
-          </>
+        <Button variant={'contained'} onClick={() => startFromMic()}>
+          話す
+        </Button>
+        <Button variant={'contained'} onClick={() => stopFromMic()}>
+          止める
+        </Button>
+        <Button
+          variant={'contained'}
+          onClick={() => {
+            setTexts([{ text: '' }]);
+            finalizeRecording();
+          }}
+        >
+          クリアする
+        </Button>
+        {audioDataUrl && <audio src={audioDataUrl} controls={true} />}
+        {audioDataUrl && (
+          <Button variant={'contained'} onClick={() => download()}>
+            ダウンロード
+          </Button>
         )}
       </Box>
 
       <Box sx={{ marginTop: 3, display: 'flex', flexDirection: 'column', gap: 2 }}>
         {texts
-          .filter((e) => e)
-          .map((text, i) => (
-            <Box key={i} sx={{ padding: 2, border: 'solid 1px', borderColor: 'grey.300', whiteSpace: 'pre-wrap' }}>
-              <Typography>{text}</Typography>
-            </Box>
+          .filter((e) => e.text)
+          .map((result, i) => (
+            <Accordion key={i}>
+              <AccordionSummary expandIcon={<ExpandMore />}>
+                <Typography variant={'subtitle1'}>{result.text}</Typography>
+              </AccordionSummary>
+              <AccordionDetails>
+                <Stack gap={2}>
+                  {result.translations?.map((e) => (
+                    <Stack key={e.lang} gap={0.5}>
+                      <Typography variant={'subtitle2'}>{e.lang}</Typography>
+                      <Typography variant={'body2'}>{e.text}</Typography>
+                    </Stack>
+                  ))}
+                </Stack>
+              </AccordionDetails>
+            </Accordion>
           ))}
       </Box>
     </>
