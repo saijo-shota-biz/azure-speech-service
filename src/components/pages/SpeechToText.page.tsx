@@ -1,3 +1,4 @@
+import { ExpandMore } from '@mui/icons-material';
 import {
   Accordion,
   AccordionDetails,
@@ -28,7 +29,6 @@ import { ChangeEvent, useEffect, useState, VFC } from 'react';
 import { exportWAV } from '../../utils/exportWav';
 
 import { Lang, pattern } from './TranslationPattern';
-import { ExpandMore } from '@mui/icons-material';
 
 type SpeechToken = { token: string; region: string };
 
