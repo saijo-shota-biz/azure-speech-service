@@ -10,6 +10,7 @@ const toLang: Lang[] = [
   { label: '中国語 (標準、簡体字)', code: 'zh-Hans' },
   { label: 'ドイツ語', code: 'de' },
   { label: 'フランス語', code: 'fr' },
+  { label: 'ベトナム語', code: 'vi' },
 ];
 
 export const pattern: { id: string; fromLabel: string; from: string; to: Lang[] }[] = [
@@ -22,4 +23,5 @@ export const pattern: { id: string; fromLabel: string; from: string; to: Lang[] 
   { id: '7', fromLabel: '中国語 (標準、簡体字)', from: 'zh-CN', to: toLang.filter((e) => e.code !== 'zh-Hans') },
   { id: '8', fromLabel: 'ドイツ語', from: 'de-DE', to: toLang.filter((e) => e.code !== 'de') },
   { id: '9', fromLabel: 'フランス語', from: 'fr-FR', to: toLang.filter((e) => e.code !== 'fr') },
+  { id: '10', fromLabel: 'ベトナム語', from: 'vi-VN', to: toLang.filter((e) => e.code !== 'vi') },
 ];
